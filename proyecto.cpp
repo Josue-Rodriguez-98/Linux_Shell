@@ -15,7 +15,7 @@ void header(){
     char *user;
     user = getenv("USER");
     getcwd(cwd, sizeof(cwd));
-    cout << user << "@myComputer:~" << cwd << ":>";
+    cout << user << "@myComputer:" << cwd << ":> ";
 }
 
 int contarEspacios(char *cadena){
@@ -33,7 +33,7 @@ void executeSimpleCommand(char** args){
     if(pidt == 0){
         int exito = execvp(args[0],args);
         if(exito < 0){
-            cout<<"No se ejecuto el comando: ";
+            cout << "No se ejecuto el comando: ";
             perror("");
         }
     }else{
