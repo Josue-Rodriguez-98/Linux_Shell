@@ -31,13 +31,13 @@ int contarEspacios(char *cadena){
 
 void executeSimpleCommand(char** args){
     pid_t pidt = fork();
-    if(pidt == 0){
+    if(pidt == 0) {
         int exito = execvp(args[0],args);
         if(exito < 0){
             cout<<"No se ejecuto el comando: ";
             perror("");
         }
-    }else{
+    } else {
         wait(NULL);
         return;
     }
@@ -54,10 +54,10 @@ void interpretCmd(){
     int posActual = 0;
     int espacios = contarEspacios(buffer);
     //cout<<"hasta aqui todo bien..."<<espacios<<"\n";
-    if (espacios == 0)    {
+    if (espacios == 0) {
         args[0] = buffer;
     } else{
-        while (posActual <= espacios){
+        while (posActual <= espacios) {
             //cout<<"entro al while"<<"\n";
             args[posActual] = strsep(&buffer, " ");
             //cout << args[posActual] << "\n";
@@ -68,21 +68,25 @@ void interpretCmd(){
         args[posActual] = NULL;
         //cout<<"agrego el ultimo null"<<"\n";
     }
-    if (strlen(historia.c_str()) > 0){
+    if (strlen(historia.c_str()) > 0) {
         //cout<<"entro al if mayor de 0\n";
         add_history(historia.c_str());
         //cout<<"lo agrego al history\n";
-        if (strcmp(args[0], "exit") == 0 || strcmp(args[0], "close") == 0){
+        if (strcmp(args[0], "exit") == 0 || strcmp(args[0], "close") == 0) {
             exit(0);
         }
-        else if (strcmp(args[0], "clear") == 0){
+        else if (strcmp(args[0], "clear") == 0) {
             clear();
         }
-        else if (strcmp(args[0], "cd") == 0){
-            if (chdir(args[1]) < 0){
+        else if (strcmp(args[0], "cd") == 0) {
+            if (chdir(args[1]) < 0) {
                 cout << "cd to " << args[1] << " no se pudo ejecutar.";
                 perror(":>");
                 cout << "\n";
+            }
+        } else if (strcmp(args[0], "cat")==0) {
+            if (args[1] == NULL) {
+                cout << "file not valid" << endl;
             }
         } else {
             //cout << "hols" << "\n";
