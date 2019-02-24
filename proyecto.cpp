@@ -7,7 +7,8 @@
 #include <sys/wait.h>
 #include <readline/readline.h>
 #include <readline/history.h>
-
+/* usando otra funcion clear */
+#define clear() printf("\033[H\033[J")
 using namespace std;
 
 void header(){
@@ -75,9 +76,7 @@ void interpretCmd(){
             exit(0);
         }
         else if (strcmp(args[0], "clear") == 0){
-            for (int i = 0; i < 100; i++){
-                cout << '\n';
-            }
+            clear();
         }
         else if (strcmp(args[0], "cd") == 0){
             if (chdir(args[1]) < 0){
@@ -85,7 +84,7 @@ void interpretCmd(){
                 perror(":>");
                 cout << "\n";
             }
-        } else{
+        } else {
             //cout << "hols" << "\n";
             executeSimpleCommand(args);
             //cout<<"\n";
