@@ -14,8 +14,9 @@ void header(){
     char cwd[1024];
     char *user;
     user = getenv("USER");
+    
     getcwd(cwd, sizeof(cwd));
-    cout << user << "@myComputer:" << cwd << ":> ";
+    cout << user << "@" << "computer" << ":" << cwd << "$ ";
 }
 
 int contarEspacios(char *cadena){
