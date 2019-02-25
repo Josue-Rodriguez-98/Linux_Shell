@@ -29,12 +29,26 @@ int contarEspacios(char *cadena){
     return retorno;
 }
 
+void executeCatCommand(char* args) {
+    pid_t pidt = fork();
+    if (pidt < 0) {
+        perror("fork");
+        exit(EXIT_FAILURE);
+    }
+    if (pidt == 0) {    /* Child reads from pipe */
+        cout << "success piping process" << endl;
+    } else {
+        wait(NULL);
+        return;
+    }
+}
+
 void executeSimpleCommand(char** args){
     pid_t pidt = fork();
     if(pidt == 0) {
         int exito = execvp(args[0],args);
         if(exito < 0){
-            cout<<"No se ejecuto el comando: ";
+            cout<<"No se ejecuto el comando: " << endl;
             perror("");
         }
     } else {
@@ -50,7 +64,7 @@ void interpretCmd(){
     //cout << historia << "\n";
     //cout<<"lo leyo bien: "<<buffer<<"\n";
     bool seguir = true;
-    char *args[100];
+    char* args[100];
     int posActual = 0;
     int espacios = contarEspacios(buffer);
     //cout<<"hasta aqui todo bien..."<<espacios<<"\n";
@@ -73,6 +87,7 @@ void interpretCmd(){
         add_history(historia.c_str());
         //cout<<"lo agrego al history\n";
         if (strcmp(args[0], "exit") == 0 || strcmp(args[0], "close") == 0) {
+            cout << "quitting..." << endl;
             exit(0);
         }
         else if (strcmp(args[0], "clear") == 0) {
@@ -86,14 +101,44 @@ void interpretCmd(){
             }
         } else if (strcmp(args[0], "cat")==0) {
             if (args[1] == NULL) {
-                cout << "file not valid" << endl;
+                cout << "You didn't specify a file!" << endl;
+            } else if (strcmp(args[1],">")==0) {
+                    string line;
+                    int argcount = 3;
+                    char *cstr;
+                    while(getline(cin, line)) {
+                        cstr = new char[line.length() + 1];
+                        strcpy(cstr, line.c_str());
+                        args[argcount] = cstr;
+                        argcount++;
+                    }
+                    delete[] cstr;
+            } else {
+                cout << args[1] << endl;
+                cout << "this part isn't ready yet." << endl;
             }
         } else {
             //cout << "hols" << "\n";
             executeSimpleCommand(args);
-            //cout<<"\n";
-       }
+            //cout<<"\n";>
+        }
     }
+}
+// function for finding pipe 
+int parsePipe(char* str, char** strpiped) { 
+    int i; 
+    for (i = 0; i < 2; i++) { 
+        strpiped[i] = strsep(&str, "<"); 
+        if (strpiped[i] == NULL) {
+            break; 
+        }
+    } 
+
+    if (strpiped[1] == NULL) {
+        return 0; // returns zero if no pipe is found. 
+    } else {
+        return 1; 
+    } 
 }
 
 int main(){
