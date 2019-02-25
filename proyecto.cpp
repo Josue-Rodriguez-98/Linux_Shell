@@ -56,10 +56,12 @@ int contarPipes(char** args, int size){
 char*** dosComandos(char** args, int size){
     char* arg1[100];
     char* arg2[100];
+
     for(int i; i < 100; i++){
         arg1[i] = NULL;
         arg2[i] = NULL;
     }
+
     char** argsO[2];
     argsO[0] = arg1;
     argsO[1] = arg2;
@@ -68,6 +70,7 @@ char*** dosComandos(char** args, int size){
 
     bool pie = false;
     int cont = 0;
+
     for(size_t i = 0; i < size; i++)
     {
         if(pie){
@@ -113,6 +116,7 @@ void processSimplePipe(char** args, char** args2) {
         if(fork() == 0){
             //execvp(args2[0], args2, const_cast<char *>(buffer));
             execlp(args2[0], args2[0], buffer, 0);
+            //execlp("cowsay", "cowsay", "ola", 0);
             perror("execlp de args2 falló");
         }
         
@@ -122,6 +126,65 @@ void processSimplePipe(char** args, char** args2) {
 }
 
 void processComplexPipe(char **args, char **args2)
+{
+    int conts = 0;
+
+    try{
+        while(args2[conts] != NULL){
+            conts++;
+            cout << "cont -> " << conts << endl;                                                                        
+        }
+    }catch(...){
+        perror("Error contango argumentos agrs2");
+    }
+
+    int pipefd[2];
+    pipe(pipefd);
+
+    if (fork() == 0){
+        close(pipefd[0]);
+
+        dup2(pipefd[1], 1);
+        dup2(pipefd[1], 2);
+
+        close(pipefd[1]);
+
+        execvp(args[0], args);
+        perror("execvp de args falló");
+        exit(1);
+    }else{
+        const int buffer_size = 1024;
+        char buffer[buffer_size];
+
+        close(pipefd[1]);
+
+        while (read(pipefd[0], buffer, sizeof(buffer)) != 0){
+        }
+
+        args2[conts] = buffer;
+        args2[conts + 1] = NULL;
+
+        if(fork() == 0){
+            //execvp(args2[0], args2, const_cast<char *>(buffer));             
+            execvp(args2[0], args2);
+            //execlp("cowsay", "cowsay", "ola", 0);
+            perror("execlp de args2 falló");
+        }
+        
+        wait(0);
+        wait(0);
+    }
+}
+
+void executeSimplePipe(char*** args){
+    int des_p[2];
+    char** args1 = args[0];
+    char** args2 = args[1];
+
+    processComplexPipe(args1, args2);
+}
+
+char* processToBuffer(char **args)
 {
     int pipefd[2];
     pipe(pipefd);
@@ -135,6 +198,7 @@ void processComplexPipe(char **args, char **args2)
 
         close(pipefd[1]);
 
+        cout << "Procesando a buffer: " << args[0] << endl;
         execvp(args[0], args);
         perror("execvp de args falló");
         exit(1);
@@ -150,58 +214,46 @@ void processComplexPipe(char **args, char **args2)
         {
         }
 
-        int cont = 0;
-        cout << args2[0] << endl;
-
-        while (strcmp(args2[cont], NULL))
-        {
-            cout << args2[cont] << endl;
-            cont++;
-        }
-
-        cout << "Quebró en " << cont << endl;
-
-        char *param[cont + 2];
-
-        for (int i = 0; i < cont - 1; i++)
-        {
-            param[i] = args2[i];
-        }
-
-        param[cont] = buffer;
-        param[cont + 1] = NULL;
-
-        for (int i = 0; i < cont + 2; i++)
-        {
-            cout << param[i] << endl;
-        }
-
-        if (fork() == 0)
-        {
-            //execvp(args2[0], args2, const_cast<char *>(buffer));
-            execvp(args2[0], param);
-            perror("execvp de args2 falló");
-        }
+        cout << "Contenido del bufer:" << endl << buffer << endl <<  endl;
 
         wait(0);
-        wait(0);
+        return buffer;
+    }
+
+    return 0;
+}
+
+void executeMultiplePipe(char*** args, int size){
+    int des_p[2];
+    char* out;
+
+    out = processToBuffer(args[0]);
+
+    for(int i = 0; i < size; i++)
+    {
+        char* argsIn[2];
+        argsIn[0] = args[i][0];
+        argsIn[1] = out;
+
+        //cout << "Out right now: " << out;
+
+        if (i < size - 1) {
+            out = processToBuffer(argsIn);
+        }else{
+            executeSimpleCommand(argsIn);
+        }        
     }
 }
 
-void executeSimplePipe(char*** args){
-    int des_p[2];
-    char** args1 = args[0];
-    char** args2 = args[1];
-
-    processSimplePipe(args1, args2);
-}
 
 void interpretCmd(){
     char *buffer;
     buffer = readline("");
     string historia = buffer;
+
     //cout << historia << "\n";
     //cout<<"lo leyo bien: "<<buffer<<"\n";
+
     bool seguir = true;
     char *args[100];
     int posActual = 0;
@@ -244,8 +296,57 @@ void interpretCmd(){
             comandosPipe = dosComandos(args, posActual);
 
             executeSimplePipe(comandosPipe);
+
+        }else if (contarPipes(args, posActual) > 1){
+            int pipeCount = contarPipes(args, posActual);
+
+            int cont = 0;
+            const char delim[2] = "|";
+            char *token;
+
+            char *argString = const_cast<char*>(historia.c_str());
+            token = strtok(argString, delim);
+
+            char** argArray[1024];
+
+            while (token != NULL)
+            {
+                char* param[1024];
+                int cont2 = 0;
+
+                token = strtok(NULL, delim);
+
+                const char delim2[2] = " ";
+                char *token2;
+
+                token2 = strtok(token, delim2);
+
+                while (token2 != NULL)
+                {                    
+                    token2 = strtok(NULL, delim2);
+                    
+                    if (token2 == 0) {
+                        param[cont] = token2;
+                        cont2++;
+
+                        cout << "Token 1: " << token << endl << "Token 2: " << token2 << endl << endl;
+                    }else{
+                        cout << "Token vacío ignorado" << endl;
+                    }
+
+                }
+
+                argArray[cont] = param;
+
+
+                cont++;
+            }
+
+            executeMultiplePipe(argArray, pipeCount);
+
         }else{
-            //cout << "hols" << "\n";
+            
+
             executeSimpleCommand(args);
             //cout<<"\n";
        }
