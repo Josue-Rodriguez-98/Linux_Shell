@@ -7,6 +7,7 @@
 #include <sys/wait.h>
 #include <readline/readline.h>
 #include <readline/history.h>
+#include <fstream>
 /* usando otra funcion clear */
 #define clear() printf("\033[H\033[J")
 using namespace std;
@@ -29,14 +30,19 @@ int contarEspacios(char *cadena){
     return retorno;
 }
 
-void executeCatCommand(char* args) {
+void executeCatCommand(char** args) {
     pid_t pidt = fork();
     if (pidt < 0) {
         perror("fork");
         exit(EXIT_FAILURE);
     }
-    if (pidt == 0) {    /* Child reads from pipe */
-        cout << "success piping process" << endl;
+    if (pidt == 0) {
+        int success = execlp(args[0], args[0], args[1], NULL);
+        if (success < 0) {
+            cout << endl;
+            perror("");
+            cout << endl;
+        }
     } else {
         wait(NULL);
         return;
@@ -103,19 +109,24 @@ void interpretCmd(){
             if (args[1] == NULL) {
                 cout << "You didn't specify a file!" << endl;
             } else if (strcmp(args[1],">")==0) {
+                if (args[2] == NULL) {
+                    cout << "You didn't specify a file!" << endl;
+                } else {
                     string line;
-                    int argcount = 3;
-                    char *cstr;
+                    cout << "> ";
+                    ofstream myfile;
+                    myfile.open (args[2]);
                     while(getline(cin, line)) {
-                        cstr = new char[line.length() + 1];
-                        strcpy(cstr, line.c_str());
-                        args[argcount] = cstr;
-                        argcount++;
+                        myfile << line << endl;
+                        cout << "> ";
+                        line = "";
                     }
-                    delete[] cstr;
+                    myfile.close();
+                    cout << endl;
+                }
             } else {
-                cout << args[1] << endl;
-                cout << "this part isn't ready yet." << endl;
+                executeCatCommand(args);
+                cout << endl;
             }
         } else {
             //cout << "hols" << "\n";
