@@ -82,108 +82,118 @@ char*** dosComandos(char** args, int size){
             }
         }
     }
-    argsOut[1][cont] = NULL;
-    cout << "hols111" << endl;
-    cout << "esto: " << argsOut[1][0] << endl;
-    
+    argsOut[1][cont] = NULL;    
     return argsOut;
 }
 
-
-void e (char** args1, char** args2){
-    int des_p[2];
-    if(pipe(des_p) == -1) {
-        perror("Pipe falló");
-        return;
-    }
-
-    cout << "ha" << endl;
-
-    pid_t pid1 = fork();
-    if(pid1 == 0)
-    {
-        close(STDOUT_FILENO);
-        dup(des_p[1]);
-        close(des_p[0]);
-        close(des_p[1]);
-
-
-        execvp(args1[0], args1);
-        perror("execvp de args1 falló");
-        exit(1);
-    }
-
-    pid_t pid2 = fork();
-    if(pid2 == 0)
-    {
-        close(STDIN_FILENO);
-        dup(des_p[0]);
-        close(des_p[1]);
-        close(des_p[0]);
-
-
-        execvp(args2[0], args2);
-        perror("execvp de args2 falló");
-        exit(1);
-    }
-
-    close(des_p[0]);
-    close(des_p[1]);
-    wait(0);
-    wait(0);
-}
-
-void e2(char** args, char** args2) {
+void processSimplePipe(char** args, char** args2) {
     int pipefd[2];
     pipe(pipefd);
 
     if (fork() == 0){
-        close(pipefd[0]); // close reading end in the child
+        close(pipefd[0]);
 
-        dup2(pipefd[1], 1); // send stdout to the pipe
-        dup2(pipefd[1], 2); // send stderr to the pipe
+        dup2(pipefd[1], 1);
+        dup2(pipefd[1], 2);
 
-        close(pipefd[1]); // this descriptor is no longer needed
+        close(pipefd[1]);
 
         execvp(args[0], args);
         perror("execvp de args falló");
         exit(1);
     }else{
-        // parent
         const int buffer_size = 1024;
-
         char buffer[buffer_size];
 
-        for(int i = 0; i < buffer_size; i++)
-        {
-            //buffer[i] = NULL;
-        }        
-
-        close(pipefd[1]); // close the write end of the pipe in the parent
+        close(pipefd[1]);
 
         while (read(pipefd[0], buffer, sizeof(buffer)) != 0){
         }
 
-        cout << args2[0] << endl;
-        cout << buffer << endl;
+        if(fork() == 0){
+            //execvp(args2[0], args2, const_cast<char *>(buffer));
+            execlp(args2[0], args2[0], buffer, 0);
+            perror("execlp de args2 falló");
+        }
+        
+        wait(0);
+        wait(0);
+    }
+}
 
-        //execl(args2[0], const_cast<char*>(buffer));
-        execl("/bin/cat", "ola", 0);
-        perror("execvp de args2 falló");
+void processComplexPipe(char **args, char **args2)
+{
+    int pipefd[2];
+    pipe(pipefd);
+
+    if (fork() == 0)
+    {
+        close(pipefd[0]);
+
+        dup2(pipefd[1], 1);
+        dup2(pipefd[1], 2);
+
+        close(pipefd[1]);
+
+        execvp(args[0], args);
+        perror("execvp de args falló");
+        exit(1);
+    }
+    else
+    {
+        const int buffer_size = 1024;
+        char buffer[buffer_size];
+
+        close(pipefd[1]);
+
+        while (read(pipefd[0], buffer, sizeof(buffer)) != 0)
+        {
+        }
+
+        int cont = 0;
+        cout << args2[0] << endl;
+
+        while (strcmp(args2[cont], NULL))
+        {
+            cout << args2[cont] << endl;
+            cont++;
+        }
+
+        cout << "Quebró en " << cont << endl;
+
+        char *param[cont + 2];
+
+        for (int i = 0; i < cont - 1; i++)
+        {
+            param[i] = args2[i];
+        }
+
+        param[cont] = buffer;
+        param[cont + 1] = NULL;
+
+        for (int i = 0; i < cont + 2; i++)
+        {
+            cout << param[i] << endl;
+        }
+
+        if (fork() == 0)
+        {
+            //execvp(args2[0], args2, const_cast<char *>(buffer));
+            execvp(args2[0], param);
+            perror("execvp de args2 falló");
+        }
+
+        wait(0);
+        wait(0);
     }
 }
 
 void executeSimplePipe(char*** args){
-    cout << "esto2 - " << args[0][0] << endl;
-    cout << "esto3 - " << args[1][0] << endl;
     int des_p[2];
     char** args1 = args[0];
     char** args2 = args[1];
 
-    cout << "esto2 - " << args1[0] << endl;
-    cout << "esto3 - " << args2[0] << endl;
-
-    e2(args1, args2);
+    processSimplePipe(args1, args2);
 }
 
 void interpretCmd(){
