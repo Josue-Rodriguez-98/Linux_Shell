@@ -132,7 +132,7 @@ void processComplexPipe(char **args, char **args2)
     try{
         while(args2[conts] != NULL){
             conts++;
-            cout << "cont -> " << conts << endl;                                                                        
+            //cout << "cont -> " << conts << endl;                                                                        
         }
     }catch(...){
         perror("Error contango argumentos agrs2");
@@ -189,6 +189,11 @@ char* processToBuffer(char **args)
     int pipefd[2];
     pipe(pipefd);
 
+    const int buffer_size = 1024;
+    char buffer[buffer_size];
+
+    //cout << "Procesando a buffer: " << args[0] << endl;
+
     if (fork() == 0)
     {
         close(pipefd[0]);
@@ -197,51 +202,62 @@ char* processToBuffer(char **args)
         dup2(pipefd[1], 2);
 
         close(pipefd[1]);
-
-        cout << "Procesando a buffer: " << args[0] << endl;
-        execvp(args[0], args);
-        perror("execvp de args falló");
+        
+        execlp(args[0], args[0], args[1], NULL);
+        perror("execlp a bufer falló");
         exit(1);
     }
     else
     {
-        const int buffer_size = 1024;
-        char buffer[buffer_size];
-
+        wait(0);
         close(pipefd[1]);
 
         while (read(pipefd[0], buffer, sizeof(buffer)) != 0)
         {
         }
 
-        cout << "Contenido del bufer:" << endl << buffer << endl <<  endl;
-
-        wait(0);
-        return buffer;
+        //cout << "Contenido del bufer:" << endl << buffer << endl <<  endl;
     }
 
-    return 0;
+    int bufSize = strlen(buffer);
+    char *sanitizedBuffer = new char[bufSize];
+
+        for (size_t i = 0; i < bufSize; i++)
+    {
+        sanitizedBuffer[i] = buffer[i];
+    }
+
+    return sanitizedBuffer;
 }
 
 void executeMultiplePipe(char*** args, int size){
     int des_p[2];
-    char* out;
-
-    out = processToBuffer(args[0]);
 
     for(int i = 0; i < size; i++)
     {
-        char* argsIn[2];
+        char* argsIn[3];
         argsIn[0] = args[i][0];
-        argsIn[1] = out;
+        argsIn[1] = processToBuffer(args[i]);
+        argsIn[2] = NULL;
 
         //cout << "Out right now: " << out;
 
-        if (i < size - 1) {
-            out = processToBuffer(argsIn);
-        }else{
-            executeSimpleCommand(argsIn);
-        }        
+        if (i == size - 1){
+            if (fork() == 0)
+            {
+                //execvp(args2[0], args2, const_cast<char *>(buffer));
+                execvp(argsIn[0], argsIn);
+                //execlp("cowsay", "cowsay", "ola", 0);
+                perror("execlp de args2 falló");
+            }
+            else
+            {
+                wait(0);
+            }
+            
+        }
+
+        
     }
 }
 
@@ -300,49 +316,34 @@ void interpretCmd(){
         }else if (contarPipes(args, posActual) > 1){
             int pipeCount = contarPipes(args, posActual);
 
-            int cont = 0;
-            const char delim[2] = "|";
-            char *token;
+            int tokCont = 0;
+            int cmdCont = 0;
+            int paramCont = 0;
 
-            char *argString = const_cast<char*>(historia.c_str());
-            token = strtok(argString, delim);
+            char* tok = args[tokCont];
+            char*** cmdArray = new char**[1024];
 
-            char** argArray[1024];
-
-            while (token != NULL)
+            for(size_t i = 0; i < 1024; i++)
             {
-                char* param[1024];
-                int cont2 = 0;
+                cmdArray[i] = new char*[pipeCount + 1];
+            }
+            
 
-                token = strtok(NULL, delim);
+            for(int i = 0; i < pipeCount*2 + 1; i++)
+            {
+                char *tok = args[i];
+                //cout << "Tok " << i << ": " << tok << endl;
 
-                const char delim2[2] = " ";
-                char *token2;
-
-                token2 = strtok(token, delim2);
-
-                while (token2 != NULL)
-                {                    
-                    token2 = strtok(NULL, delim2);
-                    
-                    if (token2 == 0) {
-                        param[cont] = token2;
-                        cont2++;
-
-                        cout << "Token 1: " << token << endl << "Token 2: " << token2 << endl << endl;
-                    }else{
-                        cout << "Token vacío ignorado" << endl;
-                    }
-
+                if (tok == "|") {
+                    cmdCont ++;
+                    paramCont = 0;
+                }else{
+                    cmdArray[cmdCont][paramCont] = tok;
+                    paramCont ++;
                 }
-
-                argArray[cont] = param;
-
-
-                cont++;
             }
 
-            executeMultiplePipe(argArray, pipeCount);
+            executeMultiplePipe(cmdArray, pipeCount);
 
         }else{
             
