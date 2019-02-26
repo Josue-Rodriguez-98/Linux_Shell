@@ -202,8 +202,15 @@ char* processToBuffer(char **args)
         dup2(pipefd[1], 2);
 
         close(pipefd[1]);
+
+        if (!args[1]) {
+            execlp(args[0], args[0], NULL);
+        }else{
+            execlp(args[0], args[0], args[1], NULL);
+        }
         
-        execlp(args[0], args[0], args[1], NULL);
+        
+        
         perror("execlp a bufer falló");
         exit(1);
     }
