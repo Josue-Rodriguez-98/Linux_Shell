@@ -224,7 +224,7 @@ char* processToBuffer(char **args)
 
         close(pipefd[1]);
 
-        if (!args[1]) {
+        if (args[1] == NULL || args[0] == "ls") {
             execlp(args[0], args[0], NULL);
         }else{
             execlp(args[0], args[0], args[1], NULL);
@@ -260,13 +260,20 @@ char* processToBuffer(char **args)
 
 void executeMultiplePipe(char*** args, int size){
     int des_p[2];
+    char *buffer;
 
     for(int i = 0; i < size; i++)
     {
-        char* argsIn[3];
+        char *argsIn[3];
         argsIn[0] = args[i][0];
-        argsIn[1] = processToBuffer(args[i]);
-        argsIn[2] = NULL;
+
+        if (i == 0){
+            argsIn[1] = NULL;
+            argsIn[2] = NULL;
+        }else{
+            argsIn[1] = buffer;
+            argsIn[2] = NULL;
+        }
 
         //cout << "Out right now: " << out;
 
@@ -274,15 +281,18 @@ void executeMultiplePipe(char*** args, int size){
             if (fork() == 0)
             {
                 //execvp(args2[0], args2, const_cast<char *>(buffer));
+
                 execvp(argsIn[0], argsIn);
                 //execlp("cowsay", "cowsay", "ola", 0);
-                perror("execlp de args2 falló");
+                perror("Error ejecutando pipe multiple");
             }
             else
             {
                 wait(0);
             }
             
+        }else{
+            buffer = processToBuffer(argsIn);
         }
 
         
@@ -377,14 +387,13 @@ void interpretCmd(){
             {
                 cmdArray[i] = new char*[pipeCount + 1];
             }
-            
 
             for(int i = 0; i < pipeCount*2 + 1; i++)
             {
                 char *tok = args[i];
                 //cout << "Tok " << i << ": " << tok << endl;
 
-                if (tok == "|") {
+                if (strstr(tok, "|") != NULL) {
                     cmdCont ++;
                     paramCont = 0;
                 }else{
@@ -393,7 +402,7 @@ void interpretCmd(){
                 }
             }
 
-            executeMultiplePipe(cmdArray, pipeCount);
+            executeMultiplePipe(cmdArray, pipeCount + 1);
 
         }else{
             
