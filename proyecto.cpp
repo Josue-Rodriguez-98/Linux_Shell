@@ -7,9 +7,11 @@
 #include <sys/wait.h>
 #include <readline/readline.h>
 #include <readline/history.h>
-#include <fstream>
+#include<fcntl.h>
+#include <vector>
 /* usando otra funcion clear */
 #define clear() printf("\033[H\033[J")
+
 using namespace std;
 
 void header(){
@@ -31,7 +33,33 @@ int contarEspacios(char *cadena){
     return retorno;
 }
 
-void executeCatCommand(char** args) {
+void executeStdoutCatCommand(string filename) {
+    int outfd = open(filename.c_str(), O_CREAT|O_WRONLY|O_TRUNC, 0644);
+    if (!outfd) {
+        cout << "FILE NOT IN DIRECTORY" << endl;
+        perror("open");
+        cout << endl;
+        return;
+    }
+    pid_t pid = fork();
+    if (pid < 0) {
+        close(outfd);
+        cout << "COULD NOT FORK" << endl;
+        perror("fork");
+        cout << endl;
+        return;
+    }
+    if (pid == 0) {
+        cout << "//Ctrl+d to reach EOF" << endl;
+        dup2(outfd, 1); 
+        execlp("cat", "cat", NULL);
+        close(outfd);
+    }
+    wait(NULL);
+    return;
+}
+
+void executeSimpleCatCommand(char** args) {
     pid_t pidt = fork();
     if (pidt < 0) {
         perror("fork");
@@ -351,20 +379,11 @@ void interpretCmd(){
                 if (args[2] == NULL) {
                     cout << "You didn't specify a file!" << endl;
                 } else {
-                    string line;
-                    cout << "> ";
-                    ofstream myfile;
-                    myfile.open (args[2]);
-                    while(getline(cin, line)) {
-                        myfile << line << endl;
-                        cout << "> ";
-                        line = "";
-                    }
-                    myfile.close();
-                    cout << endl;
+                    string filename = args[2]; 
+                    executeStdoutCatCommand(filename);
                 }
             } else {
-                executeCatCommand(args);
+                executeSimpleCatCommand(args);
                 cout << endl;
             }
         } else if (contarPipes(args, posActual) == 1){
@@ -401,7 +420,7 @@ void interpretCmd(){
                     paramCont ++;
                 }
             }
-
+            
             executeMultiplePipe(cmdArray, pipeCount + 1);
 
         }else{
