@@ -72,10 +72,9 @@ void executeSimpleCatCommand(char** args) {
             perror("");
             cout << endl;
         }
-    } else {
-        wait(NULL);
-        return;
     }
+    wait(NULL);
+    return;
 }
 
 void executeSimpleCommand(char** args){
@@ -85,10 +84,10 @@ void executeSimpleCommand(char** args){
         if (exito < 0){
             perror("No se ejecuto el comando");
         }
-    } else {
-        wait(NULL);
-        return;
     }
+    wait(NULL);
+    return;
+
 }
 
 int contarPipes(char** args, int size){
@@ -338,6 +337,9 @@ void interpretCmd(){
 
     bool seguir = true;
     char* args[100];
+    for(int i = 0; i < 100 ; i++){
+        args[i] = 0;
+    }
     int posActual = 0;
     int espacios = contarEspacios(buffer);
     //cout<<"hasta aqui todo bien..."<<espacios<<"\n";
@@ -365,7 +367,10 @@ void interpretCmd(){
         }
         else if (strcmp(args[0], "clear") == 0) {
             clear();
-        }
+        }/*else if(strcmp(args[0], "ls") == 0 && espacios == 0){
+            args[1] = NULL;
+            executeSimpleCommand(args);
+        }*/
         else if (strcmp(args[0], "cd") == 0) {
             if (chdir(args[1]) < 0) {
                 cout << "cd to " << args[1] << " no se pudo ejecutar.";
